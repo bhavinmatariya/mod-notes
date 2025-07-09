@@ -19,8 +19,10 @@ async function notesPlugin(fastify, options) {
             url: 'https://swagger.io',
             description: 'Find more info here'
           },
-          host: `${options.host || 'localhost'}:${options.port || 3000}`,
-          schemes: ['http'],
+          host: process.env.NODE_ENV === 'production' ? 
+            process.env.RENDER_EXTERNAL_URL?.replace(/^https?:\/\//, '') || 'mod-notes.onrender.com' : 
+            `${options.host || 'localhost'}:${options.port || 3000}`,
+          schemes: process.env.NODE_ENV === 'production' ? ['https'] : ['http'],
           consumes: ['application/json'],
           produces: ['application/json'],
           tags: [
@@ -48,6 +50,32 @@ async function notesPlugin(fastify, options) {
 
     // Decorate fastify instance with mongoose models
     fastify.decorate('mongoose', mongoose);
+    
+    // Add a root route for better UX
+    fastify.get('/', async (request, reply) => {
+      return {
+        name: 'mod-notes API',
+        description: 'A modular Fastify plugin for notes management',
+        version: '1.0.0',
+        documentation: '/documentation',
+        endpoints: {
+          notes: '/notes',
+          search: '/notes/search?q=yourQuery',
+          vectorSearch: '/notes/vector-search?q=yourQuery',
+          noteById: '/notes/:id'
+        }
+      };
+    });
+    
+    // Add a health check endpoint for monitoring
+    fastify.get('/health', async (request, reply) => {
+      return {
+        status: 'ok',
+        timestamp: new Date(),
+        mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        uptime: process.uptime()
+      };
+    });
     
     // Register routes
     await fastify.register(noteRoutes, { prefix: '/notes' });

@@ -1,14 +1,12 @@
 require('dotenv').config();
 const Fastify = require('fastify');
 const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 const notesPlugin = require('./index');
 const { connectDB } = require('./src/utils/db');
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || 'localhost';
 let MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mod-notes';
-let mongoServer;
 
 const start = async () => {
   try {
@@ -44,9 +42,13 @@ const start = async () => {
 
     // Start the server
     console.log('Starting server...');
-    await fastify.listen({ port: PORT, host: HOST });
-    console.log(`Server listening on ${HOST}:${PORT}`);
-    console.log(`API Documentation available at http://${HOST}:${PORT}/documentation`);
+    // For cloud deployment, we need to listen on 0.0.0.0
+    const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : HOST;
+    const port = process.env.PORT || PORT;
+    
+    await fastify.listen({ port, host });
+    console.log(`Server listening on ${host}:${port}`);
+    console.log(`API Documentation available at /documentation`);
   } catch (err) {
     console.error('Error starting server:', err);
     if (mongoose.connection.readyState !== 0) {
